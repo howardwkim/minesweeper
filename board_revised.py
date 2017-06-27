@@ -1,6 +1,6 @@
+from sys import exit
 from random import randint
 from Coordinate import Coordinate
-from cell import Cell
 
 
 class Board():
@@ -12,12 +12,13 @@ class Board():
         self.cols = cols
         self.board = [['-'] * self.rows for __ in range(self.cols)]
         self.board_solution = [[0] * self.rows for __ in range(self.cols)]
-        self.TEST_BOARD = [[Cell()] * self.rows for __ in range(self.cols)]
+        self.TEST_BOARD = [[]]
         self.mines = mines
         self.mine_coordinates = []
         self._place_mines()
         self.flag_count = 0
         self._place_mine_clues()
+        self.solved = False
 
     def _place_mines(self):
         mine_count = 0
@@ -28,7 +29,6 @@ class Board():
                 mine_count += 1
                 self.mine_coordinates.append(Coordinate(row, col))
                 self.board_solution[row][col] = '*'
-                self.TEST_BOARD[row][col].set_mine
         # self.board_solution[0][0] = '*'
 
     def _place_mine_clues(self):
@@ -39,10 +39,6 @@ class Board():
                 if self._is_valid_coordinate(cell.row, cell.col) and \
                         not self._is_mine(cell.row, cell.col):
                     self.board_solution[cell.row][cell.col] += 1
-
-                if self._is_valid_coordinate(cell.row, cell.col) and \
-                        not self.TEST_BOARD[cell.row][cell.col].is_mine:
-                    self.TEST_BOARD[cell.row][cell.col].increment_mine_hint()
 
     def _print_board(self, board):
         print "   ",
@@ -64,7 +60,7 @@ class Board():
         else:
             return False
 
-    def _update_board(self, row, col, action):
+    def _take_action(self, row, col, action):
         if self._is_mine(row, col) and action == 'step':
             print "Game Over"
         elif not self._is_mine(row, col) and action == 'step':
@@ -79,12 +75,13 @@ class Board():
 
     def _is_solved(self):
         for mine in self.mine_coordinates:
-            if self.board[mine.x][mine.y] != '+':
-                print "Incorrect Solution"
+            if self.board[mine.row][mine.col] != '+':
+                return False
+        return True
         print "Correct Solution"
 
     def _is_valid_coordinate(self, row, col):
-        if (0 <= row < self.rows - 1) and (0 <= col < self.cols - 1):
+        if (0 <= row < self.rows) and (0 <= col < self.cols):
             return True
         return False
 
@@ -95,44 +92,64 @@ class Board():
         if cell == 0, no mines are adjacent to cell. Reveal all adjacent cell
             if revealed cell == 0, reveal all adjacent cells
         '''
-        if self.TEST_BOARD[row][col].adjacent_mines > 0:
+        if self.board_solution[row][col] > 0:
             self._reveal_cell(row, col)
         elif self.board_solution[row][col] == 0:
             self._reveal_adjacent_cells(row, col)
-        # if self.board_solution[row][col] > 0:
-        #     self._reveal_cell(row, col)
-        # elif self.board_solution[row][col] == 0:
-        #     self._reveal_adjacent_cells(row, col)
-
-    def _reveal_adjacent_cells(self, row, col):
-        # clear all adjacent cells. if adjcent cell is clear
-        for box in Board.BOXES:
-            cell = Coordinate(row + box[0], col + box[1])
-            if self._is_valid_coordinate(cell.row, cell.col):
-                self._reveal_cell(row, col)
-
 
     def _reveal_cell(self, row, col):
         self.board[row][col] = self.board_solution[row][col]
 
-    # changes the entire business model
-    # try iteratively with a stack
-    # if not self._is_mine(row, col) and self._is_valid_coordinate(row, col):
-    #
-    # print 'yes'
+    def _reveal_adjacent_cells(self, row, col):
+        # clear all adjacent cells. if adjcent cell is clear
+        self._reveal_cell(row, col)
+        for box in Board.BOXES:
+            cell = Coordinate(row + box[0], col + box[1])
+            if self._is_valid_coordinate(cell.row, cell.col) and \
+                    self.board[cell.row][cell.col] == '-':
+                self._reveal_cell(cell.row, cell.col)
+                if self.board_solution[cell.row][cell.col] == 0:
+                    self._reveal_adjacent_cells(cell.row, cell.col)
 
 
-test = Board()
-test._update_board(2, 4, 'step')
-test._update_board(3, 2, 'step')
-test._update_board(0, 9, 'step')
-test._update_board(1, 2, 'step')
-test._update_board(7, 6, 'step')
-test._update_board(0, 0, 'step')
-test._print_board(test.board)
-test._print_board(test.board_solution)
-print test.mine_coordinates
+class Engine():
+    def __init__(self):
+        self.new_game = Board(mines=2)
 
+    def play(self):
+        while not self.new_game.solved:
+            self.new_game._print_board(self.new_game.board_solution)
+            self.new_game._print_board(self.new_game.board)
+            row = input("Row: ")
+            col = input("Col: ")
+            action = raw_input("Step, Flag or Remove: ")
+            # print "Column Row Action"
+            # print "Action: Step, Flag or Remove"
+            # string_input = raw_input(">: ").split()
+            # row, col, action = string_input
+
+            if not self.new_game._is_valid_coordinate(row - 1, col - 1):
+                print "invalid coordinates"
+                continue
+            else:
+                self.new_game._take_action(row - 1, col - 1, action)
+            if self.new_game._is_solved():
+                print "You win!!!"
+                exit(1)
+
+
+test_game = Engine()
+test_game.play()
+
+# game = Board()
+# while not game.solved:
+#     game._print_board(game.board_solution)
+#     game._print_board(game.board)
+#     row = input("Row: ")
+#     col = input("Col: ")
+#     action = raw_input("Step, Flag or Remove: ")
+#     game._take_action(row, col, action)
+#     game._is_solved()
 
 '''
 # UX
